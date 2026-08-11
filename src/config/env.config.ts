@@ -2,19 +2,16 @@ import 'dotenv/config';
 import * as z from 'zod';
 
 /**
- * env.config.ts
- * -------------
- * Validates process.env at boot using Zod, fails fast with a readable
- * error if anything required is missing/malformed, and exports a typed
- * `env` object so the rest of the app never touches `process.env` raw.
- *
- * Trimmed hard from Beggy's version. Beggy's env schema also validates:
- * cookie names, session secret, CSRF secret, refresh-token secrets/TTLs,
- * Google/Facebook OAuth client IDs+secrets+callback URLs, Resend email
- * API key, frontend success/failure redirect URLs. None of that applies
- * here — see beggy-reuse-audit.html §3/§4/§5 for why (bearer tokens only,
- * no sessions, no OAuth, no email flows, no frontend to redirect to).
+ * @module config/env.config
+ * @description
+ * Validates `process.env` at process boot using Zod and exports a
+ * typed, validated `env` object plus a derived `envConfig` grouping.
+ * The rest of the application reads configuration through these
+ * exports and never touches `process.env` directly, so a missing or
+ * malformed variable fails fast at startup with a readable error
+ * rather than surfacing as an obscure runtime failure later.
  */
+
 const envSchema = z.object({
 	// ------------------------------------------------------------------
 	// Server
@@ -27,28 +24,18 @@ const envSchema = z.object({
 	// ------------------------------------------------------------------
 	// Database
 	// ------------------------------------------------------------------
-	/**
-	 * Consumed directly by prisma.config.ts (`datasource.url`) and by
-	 * Prisma's PrismaPg adapter — same pattern as Beggy's DATABASE_URL.
-	 */
+	/** Consumed by `prisma.config.ts` and the Prisma `PrismaPg` adapter. */
 	DATABASE_URL: z.url({ protocol: /^postgresql|postgres$/ }),
 
 	// ------------------------------------------------------------------
-	// JWT — single access token, no refresh token
+	// JWT — a single access token, no refresh token
 	// ------------------------------------------------------------------
-	/**
-	 * Only one secret, unlike Beggy's separate access/refresh secrets —
-	 * there's only one token type to sign per the auth-model switch.
-	 */
 	JWT_ACCESS_TOKEN_SECRET: z
 		.string()
 		.min(32, 'JWT secret should be at least 32 characters'),
 
-	/**
-	 * jsonwebtoken `expiresIn` format (e.g. "1d", "24h", "15m").
-	 * Kept as a plain string, validated at jwt.sign() call time by the
-	 * jsonwebtoken lib itself — matches Beggy's SignOptions.expiresIn usage.
-	 */
+	/** `jsonwebtoken` `expiresIn` format (e.g. "1d", "24h", "15m"),
+	 *  validated by the library itself at sign time. */
 	JWT_ACCESS_TOKEN_EXPIRES_IN: z.string().default('1d'),
 
 	JWT_ISSUER: z.string().default('campus-api'),
@@ -59,12 +46,10 @@ const envSchema = z.object({
 	// ------------------------------------------------------------------
 	BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
 
-	/**
-	 * Comma-separated list, split at use-site into the `cors` package's
-	 * `origin` array — see app.middleware.ts's corsMiddleware.
-	 * No frontend exists for this spec, so this defaults to '*' in dev;
-	 * MUST be overridden in production once a real client origin exists.
-	 */
+	/** Comma-separated origin list, split at use-site into the `cors`
+	 *  package's `origin` array. Defaults to `'*'` for local
+	 *  development; must be overridden with a real origin list before
+	 *  deploying to production. */
 	CORS_ORIGIN: z.string().default('*'),
 
 	RATE_LIMIT_WINDOW_MS: z.coerce
@@ -81,10 +66,9 @@ const envSchema = z.object({
 });
 
 /**
- * Parse once at import time. Throwing here (rather than returning a
- * Zod error object) is intentional — a missing DATABASE_URL or JWT
- * secret should crash the process on boot, not surface as a runtime
- * 500 on the first request that needs it.
+ * Parsed once at import time. A validation failure throws immediately
+ * — a missing `DATABASE_URL` or JWT secret should crash the process
+ * on boot, not surface later as a 500 on the first request that needs it.
  */
 const parsed = envSchema.safeParse(process.env);
 
@@ -95,18 +79,16 @@ if (!parsed.success) {
 }
 
 /**
- * Typed, validated environment. Import this everywhere instead of
- * reading `process.env` directly.
+ * Typed, validated environment variables. Import this everywhere
+ * instead of reading `process.env` directly.
  */
 export const env = parsed.data;
 
 /**
- * envConfig
- * ---------
- * Grouped/derived config built on top of `env`, mirroring Beggy's
- * envConfig shape (envConfig.security.jwt.*, envConfig.cookies.*, etc.)
- * so downstream files (jwt.util.ts, app.middleware.ts) read config the
- * same way Beggy's do — just with a much smaller surface.
+ * Grouped, derived configuration built on top of {@link env}, so
+ * consuming modules (e.g. `jwt.util.ts`, `app.middleware.ts`) read
+ * configuration through a small, purpose-shaped surface rather than
+ * individual environment variable names.
  */
 export const envConfig = {
 	server: {
@@ -136,10 +118,8 @@ export const envConfig = {
 	},
 
 	cors: {
-		/**
-		 * '*' stays a literal string for dev convenience; split into an
-		 * array only when a real allow-list is configured.
-		 */
+		/** `'*'` stays a literal string for dev convenience; split into
+		 *  an array only when a real allow-list is configured. */
 		origin:
 			env.CORS_ORIGIN === '*'
 				? '*'

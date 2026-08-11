@@ -3,23 +3,22 @@ import { PrismaClient } from '../../prisma/generated/prisma/client';
 import { env } from './env.config';
 
 /**
- * prisma.client.ts
- * ------------------
- * Single Prisma Client instance for the whole app, built with the
- * PrismaPg driver adapter (prisma/schema.prisma's generator uses
- * Prisma 7's client generator, which requires an explicit adapter
- * rather than a bundled query engine).
+ * @module config/prisma.client
+ * @description
+ * Provides a single, process-wide {@link PrismaClient} instance built
+ * with the `PrismaPg` driver adapter.
  *
- * `tsx watch` re-evaluates modules on every file save in dev, which
- * would otherwise open a fresh Postgres connection pool per reload.
- * Caching the instance on `globalThis` outside production (same
- * pattern Beggy/PyLedger use) avoids exhausting local Postgres
- * connections during `pnpm dev`.
+ * `tsx watch` re-evaluates modules on every file save during local
+ * development, which would otherwise open a fresh Postgres connection
+ * pool on every reload. Caching the instance on `globalThis` outside
+ * of production avoids exhausting local Postgres connections during
+ * `pnpm dev`.
  */
 const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+/** The application's shared Prisma client. */
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
 if (env.NODE_ENV !== 'production') {
