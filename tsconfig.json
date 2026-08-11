@@ -57,20 +57,17 @@
 			"@/*": ["./src/*"],
 			"@prisma/*": ["./prisma/*"],
 			"@prisma": ["./prisma"],
-			"@app": ["./app.ts"],
-			"@tests": ["./tests/utils/index.ts"],
-			"@route": ["./app.route.ts"],
 
 			//* ========== SPECIFIC SRC PATHS ==========
 			// Direct access to commonly used folders
 			"@config": ["./src/config/index.ts"],
 			"@shared": ["./src/shared/index.ts"],
-			"@modules": ["./src/modules/index.ts"],
+			"@features": ["./src/features/index.ts"],
 
 			// Deep imports with wildcards
 			"@config/*": ["./src/config/*"],
 			"@shared/*": ["./src/shared/*"],
-			"@modules/*": ["./src/modules/*"],
+			"@features/*": ["./src/features/*"],
 
 			//* ========== PRISMA SPECIFIC ==========
 			"@prisma-generated/*": ["./prisma/generated/prisma/*"]

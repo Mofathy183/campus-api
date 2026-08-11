@@ -1,7 +1,6 @@
 import { defineConfig } from 'eslint/config';
 import path from 'node:path';
 import js from '@eslint/js';
-import { defineConfig } from 'eslint/config';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';

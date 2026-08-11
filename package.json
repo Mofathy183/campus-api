@@ -54,6 +54,7 @@
 	},
 	"packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1",
 	"devDependencies": {
+		"@eslint/js": "^10.0.1",
 		"@types/cors": "^2.8.19",
 		"@types/express": "^5.0.6",
 		"@types/express-xss-sanitizer": "^2.0.0",
@@ -71,7 +72,7 @@
 		"prettier": "^3.9.6",
 		"supertest": "^7.2.2",
 		"tsx": "^4.23.12",
-		"typescript": "^7.0.2",
+		"typescript": "^6.0.3",
 		"vite-tsconfig-paths": "^6.1.1",
 		"vitest": "^4.1.10"
 	},
