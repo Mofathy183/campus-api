@@ -5,18 +5,16 @@ import {
 } from '@shared/errors';
 
 /**
- * api-response.util.ts
- * ---------------------
- * Adjusted from Beggy's api-response.util.ts (beggy-reuse-audit.html
- * §3). Beggy's envelope is
- *   { success, status, message, data, meta, timestamp, suggestion }
- * — the spec's example is just { success, message } (+ data on reads).
- * Simplified here to: success + message, data on reads, meta only for
- * paginated list endpoints (pagination is one of the three chosen
- * bonuses). `code` is kept on error responses — it's the cheap,
- * genuinely useful part of PyLedger's ErrorCode pattern the spec's
- * §8 points at, and costs nothing to include alongside `message`.
+ * @module shared/utils/api-response.util
+ * @description
+ * Defines the API's response envelope and the helper functions that
+ * build it, so every route returns success and error bodies in
+ * exactly the same shape: `{ success, message, data? }` for success,
+ * `{ success, message, code, error? }` for failure. `meta` is added
+ * only on paginated list responses.
  */
+
+/** Pagination metadata attached to a paginated list response. */
 export interface PaginationMeta {
 	page: number;
 	limit: number;
@@ -25,6 +23,7 @@ export interface PaginationMeta {
 	hasPreviousPage: boolean;
 }
 
+/** Shape of every successful JSON response. */
 export interface SuccessResponse<T> {
 	success: true;
 	message: string;
@@ -32,16 +31,23 @@ export interface SuccessResponse<T> {
 	meta?: PaginationMeta;
 }
 
+/** Shape of every failed JSON response. */
 export interface ErrorBody {
 	success: false;
 	message: string;
 	code: ErrorCode;
-	/** Present only for validation failures (Zod field-errors tree) or
-	 *  when an AppError was thrown with `details` — omitted otherwise
-	 *  so a plain 404/401 doesn't carry a stray `error: undefined`. */
+	/** Present only for validation failures (a Zod field-errors tree)
+	 *  or when an `AppError` was thrown with `details` — omitted
+	 *  otherwise so a plain 404/401 doesn't carry a stray
+	 *  `error: undefined`. */
 	error?: unknown;
 }
 
+/**
+ * Low-level builders for the two response shapes. Prefer
+ * {@link apiResponseMap} from controllers for the common success
+ * cases; use `createResponse.error` directly from the error handler.
+ */
 export const createResponse = {
 	success: <T>(
 		data: T,
@@ -67,8 +73,9 @@ export const createResponse = {
 };
 
 /**
- * Pre-configured helpers for the common cases — use these from
- * controllers instead of `createResponse` directly.
+ * Pre-configured helpers for the two most common success cases —
+ * used by {@link BaseController}'s `ok`/`created` methods instead of
+ * calling {@link createResponse} directly.
  */
 export const apiResponseMap = {
 	ok: <T>(data: T, message = 'Request successful', meta?: PaginationMeta) =>

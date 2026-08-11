@@ -1,31 +1,30 @@
 /**
- * shared/types/index.ts
- * ----------------------
+ * @module shared/types
+ * @description
  * App-level types shared across middleware, controllers, and services.
- *
- * `Role` is deliberately a plain string-literal union rather than an
- * import of Prisma's generated `UserRole` enum. Beggy's shared types
- * import straight from `@prisma-generated/enums`, which is fine there —
- * but campus-api's shared/ layer has no path aliases (see the naming
- * convention doc's "decoupled from framework" rule), so importing the
- * generated client from deep inside shared/ means fragile relative
- * paths (`../../../prisma/generated/prisma`) leaking into files that
- * shouldn't need to know about Prisma at all. Keep this union in sync
- * with `enum UserRole` in prisma/models/user.prisma by hand — it's two
- * values, not worth generating.
+ */
+
+/**
+ * A user's role. Kept as a plain string-literal union rather than a
+ * re-export of the Prisma-generated `UserRole` enum, so that files
+ * outside the data-access layer don't need a dependency on the
+ * generated Prisma client purely for a type. Must be kept in sync by
+ * hand with `enum UserRole` in `prisma/models/user.prisma` — a
+ * two-value union, not worth generating.
  */
 export type Role = 'ADMIN' | 'STUDENT';
 
 /**
- * Trusted identity attached to `req.user` by `requireAuth`
- * (see shared/middleware/auth.middleware.ts). Only ever built from a
- * verified JWT payload — never trust a hand-built AuthUser.
+ * The trusted identity attached to `req.user` by
+ * {@link module:shared/middleware/auth.middleware.requireAuth}. Only
+ * ever constructed from a verified JWT payload — code elsewhere in
+ * the app should never build one by hand.
  */
 export interface AuthUser {
 	id: string;
 	role: Role;
-	/** JWT `iat` claim (unix seconds) — reserved for future use, e.g.
-	 *  invalidating tokens issued before a password change. Not enforced
-	 *  today; there's no such requirement in the spec. */
+	/** JWT `iat` claim (unix seconds). Reserved for future use, e.g.
+	 *  invalidating tokens issued before a password change; not
+	 *  currently enforced. */
 	issuedAt: number;
 }

@@ -1,3 +1,8 @@
+/**
+ * @module shared/utils
+ * @description Public entry point for cross-cutting utility helpers:
+ * the response envelope builders and pagination helpers.
+ */
 export { createResponse, apiResponseMap } from './api-response.util';
 export type {
 	PaginationMeta,
