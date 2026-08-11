@@ -1,24 +1,30 @@
 import * as z from 'zod';
 
 /**
- * FieldsSchema
- * ------------
- * Small set of reusable field-level validators, following the same
- * pattern as Beggy's packages/shared/src/schemas/fields.schema.ts —
- * trimmed to only what campus-api's four feature schemas actually need.
- *
- * Kept in shared/ (a domain folder, not a type folder — see the naming
- * convention doc) because these are cross-cutting primitives, not
- * feature-specific validation.
+ * @module shared/schemas/fields.schema
+ * @description
+ * Reusable field-level Zod validators shared across the four feature
+ * schemas (auth, students, courses, assignments), plus the two schema
+ * objects promoted to shared status because more than one feature
+ * needs the exact same shape: `:id` route params and list-endpoint
+ * pagination.
+ */
+
+/**
+ * Reusable field-level validators. Grouped as an object (rather than
+ * individual exports) so call sites read as `FieldsSchema.email()`,
+ * making the origin of each primitive obvious at the point of use.
  */
 export const FieldsSchema = {
-	email: () => z.email().trim().toLowerCase(),
+	email: () =>
+		z.preprocess(
+			(val) => (typeof val === 'string' ? val.trim().toLowerCase() : val),
+			z.email()
+		),
 
-	/**
-	 * Password rules kept intentionally simple — the spec doesn't ask
-	 * for a password-strength bonus, only that auth work.
-	 */
-	password: () => z.string().min(8).max(72).trim(),
+	/** Deliberately simple — no password-strength policy is required
+	 *  beyond a sane minimum/maximum length. */
+	password: () => z.string().trim().min(8).max(72),
 
 	name: (label: string) =>
 		z
@@ -29,10 +35,8 @@ export const FieldsSchema = {
 
 	uuid: () => z.uuid(),
 
-	/**
-	 * Institution-facing student identifier — not a UUID, so it gets
-	 * its own shape check rather than reusing `uuid()`.
-	 */
+	/** Institution-facing student identifier — not a UUID, so it gets
+	 *  its own shape check rather than reusing `uuid()`. */
 	studentCode: () =>
 		z
 			.string()
@@ -61,8 +65,8 @@ export const FieldsSchema = {
 };
 
 /**
- * Shared params schema for the common `:id` route param, reused across
- * all four feature routers — matches Beggy's ParamsSchema.uuid pattern.
+ * Shared schema for the common `:id` route param, reused across every
+ * feature router that exposes a `GET/PUT/DELETE /:id`-style endpoint.
  */
 export const ParamsSchema = {
 	uuid: z.object({
@@ -71,10 +75,9 @@ export const ParamsSchema = {
 };
 
 /**
- * Shared pagination query schema — promoted here (per the folder-pattern
- * decision log: "only promote a schema to shared/ if two+ features import
- * the exact same one") because Students, Courses, and Assignments list
- * endpoints all use the same page/limit shape.
+ * Shared pagination query schema. Promoted out of any single feature
+ * because the students, courses, and assignments list endpoints all
+ * accept the identical `?page=&limit=` shape.
  */
 export const PaginationSchema = z.object({
 	page: z.coerce.number().int().min(1).default(1),
