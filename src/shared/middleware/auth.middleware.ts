@@ -13,18 +13,23 @@ declare global {
 }
 
 /**
- * auth.middleware.ts → requireAuth
- * ----------------------------------
- * This is the whole point of the auth-model switch documented in
- * beggy-reuse-audit.html §1/§3: Beggy's requireAuth reads
- * `req.authTokens.accessToken` (populated by a separate
- * authCookieParser middleware off `req.cookies`) and also initializes
- * a CASL ability via `defineAbilityFor`. Neither applies here —
- * campus-api has no cookie-parser in the stack and no RBAC.
+ * @module shared/middleware/auth.middleware
+ * @description
+ * Bearer-token authentication middleware. Reads
+ * `Authorization: Bearer <token>`, verifies it, and attaches the
+ * resulting {@link AuthUser} to `req.user` for downstream handlers.
+ */
+
+/**
+ * Requires a valid bearer access token on the incoming request.
  *
- * Reads `Authorization: Bearer <token>` directly, verifies it, attaches
- * `req.user`, or forwards a 401 AppError to error.handler.ts. ~15
- * lines total, same estimate as the audit called for.
+ * On success, attaches the verified {@link AuthUser} to `req.user`
+ * and calls `next()`. On failure, forwards an error to
+ * {@link module:shared/errors/error.handler.errorHandler} — either a
+ * `TOKEN_MISSING` {@link AppError} if no token was supplied, or the
+ * raw JWT verification error otherwise (handled explicitly there).
+ *
+ * @route Applied to every protected route.
  */
 export const requireAuth = (
 	req: Request,
@@ -45,8 +50,6 @@ export const requireAuth = (
 		req.user = verifyAccessToken(token);
 		next();
 	} catch (error) {
-		// jwt.verify's own JsonWebTokenError/TokenExpiredError propagate
-		// here and are handled explicitly in error.handler.ts.
 		next(error);
 	}
 };

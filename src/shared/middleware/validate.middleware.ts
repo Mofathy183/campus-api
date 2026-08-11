@@ -2,6 +2,16 @@ import type { NextFunction, Request, Response } from 'express';
 import type { ZodType } from 'zod';
 import { ParamsSchema } from '@shared/schemas';
 
+/**
+ * @module shared/middleware/validate.middleware
+ * @description
+ * Zod-backed request validation middleware, applied per-route to
+ * `body`, `query`, and/or `params`. Validation failures are forwarded
+ * to `next()` as raw `ZodError`s; formatting them into the API's
+ * error shape is {@link module:shared/errors/error.handler}'s
+ * responsibility, not this module's.
+ */
+
 interface ValidationSchema {
 	body?: ZodType;
 	query?: ZodType;
@@ -9,20 +19,12 @@ interface ValidationSchema {
 }
 
 /**
- * validate.middleware.ts
- * -----------------------
- * Reused from Beggy's validator.middleware.ts factory pattern
- * (beggy-reuse-audit.html §2) — directly matches spec §7: "Zod on
- * every route: body, params, and query where relevant."
+ * Builds an Express middleware that validates the given parts of a
+ * request against the supplied Zod schemas, replacing each validated
+ * part with its parsed (and possibly coerced/defaulted) value.
  *
- * Cut: Beggy's `reconstructQuery` dot-notation/nested-object parsing
- * (e.g. `?filter.status=PENDING` → `{ filter: { status } }`). Nothing
- * in this spec needs nested query params — pagination's just
- * `?page=1&limit=20` — so `req.query` is validated as a flat object.
- *
- * Validation errors are forwarded to `next()` as raw ZodErrors;
- * error.handler.ts (not this file) turns them into the spec's
- * `{ success: false, message }` shape.
+ * @param schema - Zod schemas keyed by request part to validate.
+ * @returns An async Express middleware.
  */
 export const validateRequest =
 	(schema: ValidationSchema) =>
@@ -46,17 +48,26 @@ export const validateRequest =
 		}
 	};
 
+/** Convenience wrapper for validating only `req.body`. */
 export const validateBody = (schema: ZodType) =>
 	validateRequest({ body: schema });
+
+/** Convenience wrapper for validating only `req.query`. */
 export const validateQuery = (schema: ZodType) =>
 	validateRequest({ query: schema });
+
+/** Convenience wrapper for validating only `req.params`. */
 export const validateParams = (schema: ZodType) =>
 	validateRequest({ params: schema });
 
 /**
- * Convenience middleware for the common `:id` route param, reused
- * across all four feature routers.
+ * Pre-built middleware for the common `:id` route param, reused
+ * across every feature router that exposes a `GET/PUT/DELETE /:id`
+ * endpoint.
  *
- *   router.get('/:id', validateUuidParam, controller.getById);
+ * @example
+ * ```ts
+ * router.get('/:id', validateUuidParam, controller.getById);
+ * ```
  */
 export const validateUuidParam = validateRequest({ params: ParamsSchema.uuid });

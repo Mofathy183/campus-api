@@ -9,14 +9,17 @@ import { STATUS_CODE, ErrorCode } from '@shared/errors';
 import { createResponse } from '@shared/utils';
 
 /**
- * app.middleware.ts
- * -------------------
- * Reused from Beggy's app.middleware.ts (beggy-reuse-audit.html §2)
- * for the parts that are pure infra: Pino setup, CORS, health check,
- * 404 handler. Rate limiting is kept too (cheap, "Optional" on the
- * package audit, no reason to skip). Everything CSRF/session-related
- * that used to live in this file is gone — see app.ts for the
- * corresponding cuts to the middleware stack.
+ * @module shared/middleware/app.middleware
+ * @description
+ * Application-wide infrastructure middleware: structured logging
+ * (Pino), CORS, rate limiting, the liveness health check, and the
+ * catch-all handler for unmatched routes.
+ */
+
+/**
+ * Base Pino logger instance. Pretty-printed in non-production
+ * environments for local readability; structured JSON in production
+ * for log-aggregation tooling.
  */
 export const logger = pino({
 	level: envConfig.logging.level,
@@ -34,6 +37,12 @@ export const logger = pino({
 			: undefined,
 });
 
+/**
+ * HTTP request/response logging middleware, mounted globally in
+ * `app.ts`. Logs one line per request with method, URL, status code,
+ * and response time; escalates to `warn`/`error` level based on the
+ * resulting status code or a thrown error.
+ */
 export const pinoHttpLogger = pinoHttp({
 	logger,
 	customLogLevel: (_req, res, err) => {
@@ -49,14 +58,16 @@ export const pinoHttpLogger = pinoHttp({
 	},
 });
 
+/** CORS middleware, configured from `CORS_ORIGIN`. */
 export const corsMiddleware = cors({
 	origin: envConfig.cors.origin,
 	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
 });
 
 /**
+ * Liveness check for the hosting platform.
+ *
  * @route GET /health
- * Liveness check for Docker/host platform (Render/Railway/Fly.io).
  */
 export const healthCheck = (_req: Request, res: Response): void => {
 	res.status(STATUS_CODE.OK).json({
@@ -72,6 +83,11 @@ const rateLimitHandler = (_req: Request, res: Response): void => {
 	);
 };
 
+/**
+ * Fixed-window rate limiter applied globally. Disabled during
+ * automated tests (`NODE_ENV=test`) so test suites aren't throttled
+ * by their own request volume.
+ */
 export const limiter = rateLimit({
 	windowMs: envConfig.rateLimit.windowMs,
 	max: envConfig.rateLimit.max,
@@ -81,8 +97,9 @@ export const limiter = rateLimit({
 });
 
 /**
- * Registered after all routes, before errorHandler — catches anything
- * that didn't match a route.
+ * Catch-all handler for any request that didn't match a mounted
+ * route. Registered after every feature router and before
+ * {@link module:shared/errors/error.handler.errorHandler} in `app.ts`.
  */
 export const routeNotFoundHandler = (req: Request, res: Response): void => {
 	const details = { requestedPath: req.path, method: req.method };

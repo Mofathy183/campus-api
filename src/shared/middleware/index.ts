@@ -1,3 +1,9 @@
+/**
+ * @module shared/middleware
+ * @description Public entry point for all Express middleware:
+ * infrastructure (logging, CORS, rate limiting, health check,
+ * 404 handling), request validation, and authentication.
+ */
 export {
 	logger,
 	pinoHttpLogger,
