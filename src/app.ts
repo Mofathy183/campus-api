@@ -18,7 +18,7 @@ import { errorHandler } from '@shared/errors';
 import { authRouter } from '@features/auth/auth.routes';
 import { studentsRouter } from '@features/students/students.routes';
 import { coursesRouter } from '@features/courses/courses.routes';
-// import { assignmentsRouter } from './features/assignments/assignments.routes';
+import { assignmentsRouter } from '@features/assignments/assignments.routes';
 
 /**
  * @module app
@@ -62,7 +62,7 @@ app.get('/health', healthCheck);
 app.use('/login', authRouter);
 app.use('/students', studentsRouter);
 app.use('/courses', coursesRouter);
-// app.use('/assignments', assignmentsRouter); // GET / POST / PATCH:id
+app.use('/assignments', assignmentsRouter);
 
 // ------------------------------------------------------------------
 // Error handling — MUST be registered last, in this exact order:
