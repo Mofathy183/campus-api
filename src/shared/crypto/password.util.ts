@@ -5,10 +5,20 @@ import { appErrorMap, ErrorCode } from '@shared/errors';
 const { saltRounds } = envConfig.security.bcrypt;
 
 /**
- * password.util.ts
- * ------------------
- * Reused as-is from Beggy (beggy-reuse-audit.html §2) — plain bcrypt
- * wrapper, zero coupling to any domain model. Copied verbatim.
+ * @module shared/crypto/password.util
+ * @description
+ * Thin, dependency-isolated wrapper around bcrypt hashing/verification.
+ * Keeping this behind two small functions means the hashing library
+ * can be swapped without touching any caller.
+ */
+
+/**
+ * Hashes a plaintext password with bcrypt using the configured salt
+ * round count.
+ *
+ * @param password - Plaintext password to hash.
+ * @returns The bcrypt hash string, safe to persist.
+ * @throws {AppError} `PASSWORD_HASH_FAILED` if bcrypt throws internally.
  */
 export const hashPassword = async (password: string): Promise<string> => {
 	try {
@@ -18,6 +28,15 @@ export const hashPassword = async (password: string): Promise<string> => {
 	}
 };
 
+/**
+ * Verifies a plaintext password against a stored bcrypt hash.
+ *
+ * @param password - Plaintext password supplied by the client.
+ * @param hashedPassword - Previously stored bcrypt hash to compare against.
+ * @returns `true` if the password matches; `false` if it doesn't or if
+ * `hashedPassword` is empty.
+ * @throws {AppError} `PASSWORD_VERIFY_FAILED` if bcrypt throws internally.
+ */
 export const verifyPassword = async (
 	password: string,
 	hashedPassword: string
