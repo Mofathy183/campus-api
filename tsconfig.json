@@ -30,8 +30,8 @@
 		"types": ["vitest/globals", "node"],
 
 		// Emit
-		"declaration": true,
-		"declarationMap": true,
+		"declaration": false,
+		"declarationMap": false,
 		"sourceMap": true,
 		"removeComments": false,
 		"importHelpers": true,
@@ -48,7 +48,6 @@
 		"composite": false,
 
 		"outDir": "./dist",
-
 		"ignoreDeprecations": "6.0",
 		// Path Aliases
 		"paths": {
@@ -80,5 +79,5 @@
 		"server.ts",
 		"*.config.ts"
 	],
-	"exclude": ["node_modules", "dist", "build", "coverage"]
+	"exclude": ["node_modules", "dist", "build", "coverage", "prisma/generated"]
 }
