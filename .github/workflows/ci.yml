@@ -15,9 +15,7 @@ jobs:
     name: Lint, type-check, test, build
     runs-on: ubuntu-latest
 
-    # Dummy values only — nothing in the current test suite makes a
-    # real DB connection or signs a real token with these. They exist
-    # purely to satisfy env.config.ts's Zod validation at import time.
+    # Dummy values
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://ci:ci@localhost:5432/campus_api_ci?schema=public
@@ -32,8 +30,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
