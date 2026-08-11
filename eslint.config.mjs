@@ -18,6 +18,7 @@ export default defineConfig([
 			'**/dist/**',
 			'**/build/**',
 			'**/coverage/**',
+			'**/generated/**', 
 			'**/out/**',
 			'*.config.js',
 			'*.config.mjs',
