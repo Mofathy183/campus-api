@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { BaseController } from '@shared/core';
 import { getPagination } from '@shared/utils';
 import type { StudentsService } from './students.service';
-import type { CreateStudentInput, UpdateStudentInput } from './students.schema';
 
 /**
  * @module features/students/students.controller
@@ -53,7 +52,7 @@ export class StudentsController extends BaseController {
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			const input = req.body as CreateStudentInput;
+			const input = req.body;
 			const student = await this.studentsService.create(input);
 			this.created(res, student, 'Student created');
 		} catch (error) {
@@ -68,7 +67,7 @@ export class StudentsController extends BaseController {
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			const input = req.body as UpdateStudentInput;
+			const input = req.body;
 			const student = await this.studentsService.update(
 				this.getParam(req),
 				input

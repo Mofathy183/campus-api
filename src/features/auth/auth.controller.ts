@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { BaseController } from '@shared/core';
 import type { AuthService } from './auth.service';
-import type { LoginInput } from './auth.schema';
 
 /**
  * @module features/auth/auth.controller
@@ -23,7 +22,7 @@ export class AuthController extends BaseController {
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			const { email, password } = req.body as LoginInput;
+			const { email, password } = req.body;
 			const result = await this.authService.login(email, password);
 			this.ok(res, result, 'Login successful');
 		} catch (error) {

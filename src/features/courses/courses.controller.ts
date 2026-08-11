@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { BaseController } from '@shared/core';
 import { getPagination } from '@shared/utils';
 import type { CoursesService } from './courses.service';
-import type { CreateCourseInput } from './courses.schema';
 
 /**
  * @module features/courses/courses.controller
@@ -53,7 +52,7 @@ export class CoursesController extends BaseController {
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			const input = req.body as CreateCourseInput;
+			const input = req.body;
 			const course = await this.coursesService.create(input);
 			this.created(res, course, 'Course created');
 		} catch (error) {
