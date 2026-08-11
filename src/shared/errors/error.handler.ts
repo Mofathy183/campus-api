@@ -8,20 +8,23 @@ import { createResponse } from '@shared/utils';
 import { logger } from '@shared/middleware';
 
 /**
- * error.handler.ts
- * -----------------
- * Reused from Beggy's error.middleware.ts (beggy-reuse-audit.html §2)
- * — the priority chain (AppError → Zod → Prisma → fallback) is exactly
- * the "single error-handling middleware" the spec's §8 calls for.
+ * @module shared/errors/error.handler
+ * @description
+ * Central Express error-handling middleware. Every error in the
+ * application — thrown explicitly or bubbled up from Prisma, Zod, or
+ * `jsonwebtoken` — is normalized here into the API's consistent
+ * `{ success: false, message }` response shape. Must be registered
+ * last in the middleware chain, after the 404 handler.
+ */
+
+/**
+ * Maps a Prisma client error to an {@link AppError}, or returns `null`
+ * if the error isn't one this handler recognizes.
  *
- * Dropped Beggy's separate `jwtErrorMap` function down to an inline
- * branch — no refresh-token edge cases to special-case, per the
- * bearer-token switch (beggy-reuse-audit.html §1/§3).
- *
- * The P2002 (unique constraint) branch is widened slightly from
- * Beggy's version to check for `student_code` and course `code` in
- * addition to `email`, since campus-api has three unique fields across
- * three different tables instead of Beggy's single `users.email`.
+ * Unique-constraint violations (`P2002`) are disambiguated by which
+ * column triggered them, since the schema has three independently
+ * unique fields across three tables (`users.email`,
+ * `students.student_code`, `courses.code`).
  */
 const prismaErrorMap = (err: unknown): AppError | null => {
 	if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -109,16 +112,20 @@ const prismaErrorMap = (err: unknown): AppError | null => {
 };
 
 /**
- * errorHandler
- * ------------
- * Priority order:
- *   1. AppError            — already normalized, trust it as-is
- *   2. ZodError             — request-shape validation failures (400)
- *   3. JWT errors           — expired/invalid bearer tokens (401)
- *   4. Prisma errors        — DB constraint/connection failures
- *   5. Fallback             — anything else → 500, logged with stack
+ * Express error-handling middleware. Normalizes any error reaching it
+ * into the API's standard JSON error shape and an appropriate HTTP
+ * status code, in priority order:
  *
- * Must be registered LAST in app.ts, after the 404 handler.
+ * 1. {@link AppError} — already normalized; serialize as-is.
+ * 2. `ZodError` — request-shape validation failure → 400.
+ * 3. JWT errors (`TokenExpiredError` / `JsonWebTokenError`) → 401.
+ * 4. Prisma errors, via {@link prismaErrorMap} — constraint/connection
+ *    failures.
+ * 5. Anything else — logged with its full stack and returned as a
+ *    generic 500, so internals are never leaked to the client.
+ *
+ * Must be the last middleware registered in `app.ts`, after the
+ * unmatched-route handler.
  */
 export const errorHandler = (
 	err: unknown,

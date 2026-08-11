@@ -1,5 +1,17 @@
 import { type ErrorCode, ErrorMessages } from './error.catalog';
 
+/**
+ * @module shared/errors/app.error
+ * @description
+ * Defines {@link AppError}, the application's canonical error type,
+ * along with the HTTP status-code constants and factory helpers used
+ * to construct it. Every error thrown intentionally by application
+ * code (as opposed to an unexpected exception) should be an
+ * `AppError`, so {@link module:shared/errors/error.handler} can
+ * translate it into a response in one place.
+ */
+
+/** Canonical HTTP status codes used across the API. */
 export const STATUS_CODE = {
 	OK: 200,
 	CREATED: 201,
@@ -13,31 +25,32 @@ export const STATUS_CODE = {
 	INTERNAL_ERROR: 500,
 } as const;
 
+/** Union of every valid HTTP status code value in {@link STATUS_CODE}. */
 export type StatusCode = (typeof STATUS_CODE)[keyof typeof STATUS_CODE];
 
+/** Optional per-throw-site overrides for an {@link AppError}. */
 export interface ErrorResponseOptions {
 	/** Overrides the catalog message for this one throw site. */
 	customMessage?: string;
 }
 
 /**
- * AppError
- * --------
- * This *is* the typed ErrorCode catalog the spec's §8 asks for —
- * reused near-verbatim from Beggy's app-error.util.ts
- * (beggy-reuse-audit.html §2), with one deliberate correction:
+ * The application's canonical, typed error.
  *
- * Beggy's version only preserves `cause` on the native `Error.cause`
- * property when `cause instanceof Error`, which silently drops plain-
- * object causes (e.g. a Zod field-errors tree, a Prisma error meta
- * blob) — their own test suite documents this as expected behavior
- * (`app-error.util.test.ts`: "does not attach non-Error cause to
- * native cause property"), but it means error.handler.ts has nothing
- * to put in the response's `error` field for those cases.
+ * Wraps a stable {@link ErrorCode}, an HTTP {@link StatusCode}, and an
+ * optional `details` payload (e.g. a validation tree or the original
+ * cause) into a single immutable object that
+ * {@link module:shared/errors/error.handler} knows how to serialize.
+ * Application code should throw this — via the {@link appErrorMap}
+ * helpers below — rather than a bare `Error`, so every intentional
+ * failure carries enough structure to produce a consistent response.
  *
- * Here, `details` is a plain class field that always carries whatever
- * was passed in, Error or not, so error.handler.ts can surface it
- * (e.g. Zod validation trees) without extra plumbing.
+ * `details` is retained as a plain field regardless of its type
+ * (`Error` instance, Zod validation tree, or otherwise), so the error
+ * handler always has something to surface without extra type
+ * narrowing. The instance is frozen after construction — an
+ * `AppError` is a value, not something callers should mutate once
+ * created.
  */
 export class AppError extends Error {
 	public readonly details?: unknown;
@@ -60,9 +73,13 @@ export class AppError extends Error {
 }
 
 /**
- * Small factory helpers so services/controllers can throw expressively
- * (`throw appErrorMap.notFound(ErrorCode.STUDENT_NOT_FOUND)`) without
- * repeating status codes everywhere.
+ * Factory helpers for constructing an {@link AppError} at the correct
+ * HTTP status without repeating status codes at every throw site.
+ *
+ * @example
+ * ```ts
+ * throw appErrorMap.notFound(ErrorCode.STUDENT_NOT_FOUND);
+ * ```
  */
 export const appErrorMap = {
 	notFound: (

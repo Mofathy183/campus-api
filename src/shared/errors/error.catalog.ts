@@ -1,16 +1,18 @@
 /**
- * error.catalog.ts
- * -----------------
- * Single source of truth for every error this API can return —
- * the "typed ErrorCode catalog" the spec's error-handling section
- * (§8) explicitly asks for, same pattern as PyLedger's.
- *
- * Trimmed hard from Beggy's ErrorCode enum (see
- * beggy-reuse-audit.html §2, app-error.util.ts entry) down to only
- * what auth/students/courses/assignments need. No CASL/permission
- * codes, no OAuth codes, no session/refresh-token codes — see
- * beggy-reuse-audit.html §4 "Skip Entirely" for why each of those
- * categories doesn't exist here.
+ * @module shared/errors/error.catalog
+ * @description
+ * Single source of truth for every error condition this API can
+ * return. Pairing a stable, machine-readable {@link ErrorCode} with a
+ * short, client-safe {@link ErrorMessages message} keeps error
+ * responses consistent across every route and gives API consumers a
+ * value they can safely branch on instead of parsing prose.
+ */
+
+/**
+ * Enumerates every distinct error condition the API can raise, grouped
+ * by concern (validation, authentication, and each of the four
+ * resource domains). Each member is a stable string value, safe to
+ * serialize in a response body and to match against in client code.
  */
 export enum ErrorCode {
 	// ---- Validation / transport ----
@@ -37,8 +39,9 @@ export enum ErrorCode {
 	// ---- Assignments ----
 	ASSIGNMENT_NOT_FOUND = 'ASSIGNMENT_NOT_FOUND',
 
-	// ---- Generic / infra fallbacks (used by prismaErrorMap when a
-	//      specific domain code above doesn't apply) ----
+	// ---- Generic / infrastructure fallbacks (used when a specific
+	//      domain code above doesn't apply, e.g. an unmapped Prisma
+	//      error) ----
 	RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
 	RESOURCE_ALREADY_EXISTS = 'RESOURCE_ALREADY_EXISTS',
 	INVALID_RELATION_REFERENCE = 'INVALID_RELATION_REFERENCE',
@@ -52,10 +55,12 @@ export enum ErrorCode {
 }
 
 /**
- * Human-readable, client-safe message per code. This is what actually
- * lands in the response body's `message` field per the spec's
- * `{ success: false, message: "Student not found" }` example — keep
- * these short and literal, not internal debugging detail.
+ * Human-readable, client-safe message for every {@link ErrorCode}.
+ * This is the literal string that lands in a response body's
+ * `message` field (e.g. `{ success: false, message: "Student not
+ * found." }`) — keep these short and free of internal implementation
+ * detail; anything more specific belongs in server-side logs, not the
+ * response.
  */
 export const ErrorMessages: Record<ErrorCode, string> = {
 	[ErrorCode.INVALID_REQUEST_DATA]: 'The request data is invalid.',
