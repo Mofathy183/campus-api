@@ -1,0 +1,19 @@
+/// Standalone resource — no relation to Student or Assignment.
+/// The spec never connects courses to the other entities, so the
+/// DB doesn't either (see beggy-reuse-audit.html §"Skip Entirely"
+/// pattern applied to schema design, not just code reuse).
+///
+/// Backs: GET /courses, GET /courses/:id, POST /courses
+model Course {
+    id String @id @default(uuid())
+
+    code  String @unique @db.VarChar(20) // e.g. "CS201"
+    title String @db.VarChar(150)
+
+    description String? @db.Text
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@map("courses")
+}

@@ -1,0 +1,36 @@
+/// Only relation is to Student (owner). No courseId — the spec never
+/// implies assignments are scoped to a course. If a real requirement
+/// for that shows up, it's a one-column migration, not a redesign.
+///
+/// Backs: GET /assignments, POST /assignments, PATCH /assignments/:id
+model Assignment {
+    id String @id @default(uuid())
+
+    title       String  @db.VarChar(150)
+    description String? @db.Text
+
+    studentId String @map("student_id")
+    student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+    status AssignmentStatus @default(PENDING)
+
+    dueAt DateTime? @map("due_at")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    /// Every realistic query is "assignments for this student" —
+    /// index accordingly even without explicit pagination-by-student
+    /// in the spec text.
+    @@index([studentId])
+    @@map("assignments")
+}
+
+/// PATCH /assignments/:id exists specifically to move status —
+/// this is the field that endpoint mutates.
+enum AssignmentStatus {
+    PENDING
+    SUBMITTED
+    GRADED
+    LATE
+}

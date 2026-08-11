@@ -1,0 +1,27 @@
+/// Auth identity only. Bearer JWT model (per reuse audit) — no OAuth,
+/// no Account table, no sessions. One User = one email + one password hash.
+///
+/// Backs: POST /login
+model User {
+    id String @id @default(uuid())
+
+    email          String @unique @db.VarChar(255)
+    hashedPassword String @map("hashed_password")
+
+    role UserRole @default(STUDENT)
+
+    /// Nullable 1:1 — an ADMIN user has no Student profile.
+    /// Enforced at the service layer (signup flow), not the DB,
+    /// same trade-off Beggy makes with User.profile.
+    student Student?
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@map("users")
+}
+
+enum UserRole {
+    ADMIN
+    STUDENT
+}
