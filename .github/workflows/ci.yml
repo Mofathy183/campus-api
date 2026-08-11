@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Lint, type-check, test, build
+    runs-on: ubuntu-latest
+
+    # Dummy values only — nothing in the current test suite makes a
+    # real DB connection or signs a real token with these. They exist
+    # purely to satisfy env.config.ts's Zod validation at import time.
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/campus_api_ci?schema=public
+      JWT_ACCESS_TOKEN_SECRET: ci-only-secret-value-not-used-for-anything-real-32chars
+      JWT_ACCESS_TOKEN_EXPIRES_IN: 1d
+      JWT_ISSUER: campus-api
+      JWT_AUDIENCE: campus-api-client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
