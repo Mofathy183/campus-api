@@ -1,0 +1,87 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		// Language and Environment
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "preserve",
+
+		// Type Checking
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true,
+		"noImplicitOverride": true,
+		"allowUnusedLabels": false,
+		"allowUnreachableCode": false,
+
+		// Module Resolution
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+
+		// Testing
+		"types": ["vitest/globals", "node"],
+
+		// Emit
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"removeComments": false,
+		"importHelpers": true,
+
+		// Interop Constraints
+		"allowJs": true,
+		"checkJs": false,
+
+		// Skip Lib Check
+		"skipLibCheck": true,
+
+		// Incremental Compilation
+		"incremental": true,
+		"composite": false,
+
+		"outDir": "./dist",
+
+		"ignoreDeprecations": "6.0",
+		// Path Aliases
+		"paths": {
+			//* ========== API ROOT IMPORTS ==========
+			"*": ["./*"],
+			"@/*": ["./src/*"],
+			"@prisma/*": ["./prisma/*"],
+			"@prisma": ["./prisma"],
+			"@app": ["./app.ts"],
+			"@tests": ["./tests/utils/index.ts"],
+			"@route": ["./app.route.ts"],
+
+			//* ========== SPECIFIC SRC PATHS ==========
+			// Direct access to commonly used folders
+			"@config": ["./src/config/index.ts"],
+			"@shared": ["./src/shared/index.ts"],
+			"@modules": ["./src/modules/index.ts"],
+
+			// Deep imports with wildcards
+			"@config/*": ["./src/config/*"],
+			"@shared/*": ["./src/shared/*"],
+			"@modules/*": ["./src/modules/*"],
+
+			//* ========== PRISMA SPECIFIC ==========
+			"@prisma-generated/*": ["./prisma/generated/prisma/*"]
+		}
+	},
+	"include": [
+		"src/**/*",
+		"prisma/**/*",
+		"app.ts",
+		"server.ts",
+		"*.config.ts"
+	],
+	"exclude": ["node_modules", "dist", "build", "coverage"]
+}
