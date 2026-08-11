@@ -16,7 +16,7 @@ import { errorHandler } from '@shared/errors';
 // independent of route registration order.
 //
 import { authRouter } from './features/auth/auth.routes';
-// import { studentsRouter } from './features/students/students.routes';
+import { studentsRouter } from './features/students/students.routes';
 // import { coursesRouter } from './features/courses/courses.routes';
 // import { assignmentsRouter } from './features/assignments/assignments.routes';
 
@@ -60,7 +60,7 @@ app.use(pinoHttpLogger);
 app.get('/health', healthCheck);
 
 app.use('/login', authRouter); // POST /login
-// app.use('/students', studentsRouter);       // GET / GET:id / POST / PUT / DELETE
+app.use('/students', studentsRouter); // GET / GET:id / POST / PUT / DELETE
 // app.use('/courses', coursesRouter);         // GET / GET:id / POST
 // app.use('/assignments', assignmentsRouter); // GET / POST / PATCH:id
 
