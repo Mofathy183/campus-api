@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError, treeifyError } from 'zod';
-import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma-generated/client';
 
 import { AppError, STATUS_CODE, ErrorCode } from './index';
@@ -153,7 +153,7 @@ export const errorHandler = (
 		return;
 	}
 
-	if (err instanceof TokenExpiredError) {
+	if (err instanceof jwt.TokenExpiredError) {
 		logger.warn({ path: req.path }, 'Access token expired');
 		res.status(STATUS_CODE.UNAUTHORIZED).json(
 			createResponse.error(ErrorCode.TOKEN_EXPIRED)
@@ -161,7 +161,7 @@ export const errorHandler = (
 		return;
 	}
 
-	if (err instanceof JsonWebTokenError) {
+	if (err instanceof jwt.JsonWebTokenError) {
 		logger.warn({ path: req.path }, 'Access token invalid');
 		res.status(STATUS_CODE.UNAUTHORIZED).json(
 			createResponse.error(ErrorCode.TOKEN_INVALID)
