@@ -64,7 +64,9 @@ FROM node:${NODE_VERSION} AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Prisma's engines need OpenSSL + glibc compat on Alpine.
+# Prisma's engines need OpenSSL + glibc compat on Alpine. wget ships
+# with base alpine and is used below by HEALTHCHECK — no extra
+# package needed for it.
 RUN apk add --no-cache openssl libc6-compat
 
 ARG PNPM_VERSION
@@ -84,5 +86,13 @@ RUN addgroup -S nodejs && adduser -S campus -G nodejs
 USER campus
 
 EXPOSE 4000
+
+# Lets Docker (and any platform that reads container health, e.g.
+# Render/Railway/Fly.io/`docker compose ps`) know the process isn't
+# just running but actually serving requests. start_period gives the
+# app time to boot before failed checks count against it — Prisma
+# client generation + first-request JIT isn't instant.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
 CMD ["pnpm", "start:prod"]
