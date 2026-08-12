@@ -69,6 +69,51 @@ describe('Students routes', () => {
 				count: 1,
 			});
 		});
+
+		it('applies ?search= as a where filter reaching Prisma', async () => {
+			(prisma.student.findMany as any).mockResolvedValue([]);
+			(prisma.student.count as any).mockResolvedValue(0);
+
+			const res = await request(app)
+				.get('/students?search=jane')
+				.set(authHeader);
+
+			expect(res.status).toBe(200);
+			expect(prisma.student.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						OR: [
+							{
+								firstName: {
+									contains: 'jane',
+									mode: 'insensitive',
+								},
+							},
+							{
+								lastName: {
+									contains: 'jane',
+									mode: 'insensitive',
+								},
+							},
+							{
+								studentCode: {
+									contains: 'jane',
+									mode: 'insensitive',
+								},
+							},
+						],
+					},
+				})
+			);
+		});
+
+		it('returns 400 when ?search= exceeds the max length', async () => {
+			const res = await request(app)
+				.get(`/students?search=${'a'.repeat(101)}`)
+				.set(authHeader);
+
+			expect(res.status).toBe(400);
+		});
 	});
 
 	describe('GET /students/:id', () => {

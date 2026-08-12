@@ -55,6 +55,10 @@ describe('StudentsService', () => {
 				take: 20,
 			});
 
+			expect(prisma.student.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: {} })
+			);
+			expect(prisma.student.count).toHaveBeenCalledWith({ where: {} });
 			expect(result.items).toEqual([
 				{
 					id: 's1',
@@ -66,6 +70,73 @@ describe('StudentsService', () => {
 				},
 			]);
 			expect(result.meta).toMatchObject({ page: 1, limit: 20, count: 1 });
+		});
+	});
+
+	describe('list() with search', () => {
+		it('builds an OR contains filter across firstName/lastName/studentCode', async () => {
+			(prisma.student.findMany as any).mockResolvedValue([withUser()]);
+			(prisma.student.count as any).mockResolvedValue(1);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ search: 'jane' }
+			);
+
+			const expectedWhere = {
+				OR: [
+					{ firstName: { contains: 'jane', mode: 'insensitive' } },
+					{ lastName: { contains: 'jane', mode: 'insensitive' } },
+					{ studentCode: { contains: 'jane', mode: 'insensitive' } },
+				],
+			};
+
+			expect(prisma.student.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: expectedWhere })
+			);
+			expect(prisma.student.count).toHaveBeenCalledWith({
+				where: expectedWhere,
+			});
+		});
+
+		it('falls back to an empty where clause when search is undefined', async () => {
+			(prisma.student.findMany as any).mockResolvedValue([]);
+			(prisma.student.count as any).mockResolvedValue(0);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ search: undefined }
+			);
+
+			expect(prisma.student.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: {} })
+			);
+		});
+
+		it('falls back to an empty where clause when no filters object is passed', async () => {
+			(prisma.student.findMany as any).mockResolvedValue([]);
+			(prisma.student.count as any).mockResolvedValue(0);
+
+			await service.list({ page: 1, limit: 20, skip: 0, take: 20 });
+
+			expect(prisma.student.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: {} })
+			);
+		});
+
+		it('returns matched items when search finds results', async () => {
+			(prisma.student.findMany as any).mockResolvedValue([
+				withUser({ firstName: 'Jane' }),
+			]);
+			(prisma.student.count as any).mockResolvedValue(1);
+
+			const result = await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ search: 'jane' }
+			);
+
+			expect(result.items).toHaveLength(1);
+			expect(result.items[0]?.firstName).toBe('Jane');
 		});
 	});
 
