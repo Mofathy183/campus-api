@@ -10,20 +10,23 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://ci:ci@localhost:5432/campus_api_ci?schema=public
+  JWT_ACCESS_TOKEN_SECRET: ci-only-secret-value-not-used-for-anything-real-32chars
+  JWT_ACCESS_TOKEN_EXPIRES_IN: 1d
+  JWT_ISSUER: campus-api
+  JWT_AUDIENCE: campus-api-client
+
 jobs:
-  build-and-test:
-    name: Lint, type-check, test, build
+  # ------------------------------------------------------------------
+  # Static checks — format, lint, type-check. Fails fast before any
+  # test job spins up, since a formatting/type error makes every
+  # downstream job's failure noise redundant.
+  # ------------------------------------------------------------------
+  static-checks:
+    name: Format, lint, type-check
     runs-on: ubuntu-latest
-
-    # Dummy values
-    env:
-      NODE_ENV: test
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/campus_api_ci?schema=public
-      JWT_ACCESS_TOKEN_SECRET: ci-only-secret-value-not-used-for-anything-real-32chars
-      JWT_ACCESS_TOKEN_EXPIRES_IN: 1d
-      JWT_ISSUER: campus-api
-      JWT_AUDIENCE: campus-api-client
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,8 +55,137 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
-      - name: Test
-        run: pnpm test
+  # ------------------------------------------------------------------
+  # Shared layer tests — errors, middleware, core, crypto, schemas,
+  # utils. Every feature depends on this layer, so it's verified in
+  # its own job before any feature test job runs; a broken shared
+  # module fails here first instead of surfacing as a confusing
+  # cascade of feature-test failures downstream.
+  # ------------------------------------------------------------------
+  shared-tests:
+    name: Test shared layer
+    runs-on: ubuntu-latest
+    needs: static-checks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Test shared
+        run: pnpm vitest run src/shared --coverage=false
+
+  # ------------------------------------------------------------------
+  # Feature unit tests — controllers and services, run with mocked
+  # Prisma/dependencies. Excludes *.routes.test.ts, which are the
+  # Supertest-driven integration tests run in the next job.
+  # ------------------------------------------------------------------
+  feature-unit-tests:
+    name: Test features (unit)
+    runs-on: ubuntu-latest
+    needs: shared-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Test features (unit)
+        run: >
+          pnpm vitest run src/features
+          --exclude "**/*.routes.test.ts"
+          --coverage=false
+
+  # ------------------------------------------------------------------
+  # Feature integration tests — *.routes.test.ts, exercised through
+  # Supertest against the real Express app (real Zod validation, real
+  # route wiring), with Prisma mocked at the data-access boundary.
+  # Runs only after unit tests pass, since a route-test failure caused
+  # by broken service/controller logic is redundant once the
+  # unit-level failure has already been caught in the previous job.
+  #
+  # Note: the vitest CLI filter matches on filename substring, not a
+  # shell glob — ".routes.test" (not "**/*.routes.test.ts") is what
+  # actually targets these files.
+  # ------------------------------------------------------------------
+  feature-integration-tests:
+    name: Test features (integration)
+    runs-on: ubuntu-latest
+    needs: feature-unit-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Test features (integration)
+        run: pnpm vitest run .routes.test --coverage=false
+
+  # ------------------------------------------------------------------
+  # Build — last gate. Only runs once every check and test job above
+  # has passed.
+  # ------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: feature-integration-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
 
       - name: Build
         run: pnpm build
