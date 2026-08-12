@@ -23,6 +23,7 @@
 		"prisma:generate": "pnpm prisma generate",
 		"prisma:migrate": "pnpm prisma migrate dev",
 		"prisma:deploy": "pnpm prisma migrate deploy",
+		"prisma:seed": "tsx prisma/seed.ts",
 		"prisma:reset": "pnpm prisma migrate reset",
 		"prisma:studio": "pnpm prisma studio"
 	},
