@@ -62,6 +62,24 @@ export const FieldsSchema = {
 	title: (max = 150) => z.string().trim().min(1).max(max),
 
 	description: () => z.string().trim().max(2000).optional(),
+
+	/**
+	 * Free-text search term for list-endpoint `?search=` query params.
+	 * Trimmed and length-capped so a pathological query string can't
+	 * be handed straight to a Prisma `contains` filter; optional —
+	 * absence means "no search filter applied". Shared across
+	 * students/courses/assignments query schemas rather than
+	 * redefined per feature, since the shape (and its constraints)
+	 * never varies by domain.
+	 *
+	 * @example
+	 * ```ts
+	 * export const StudentQuerySchema = PaginationSchema.extend({
+	 *   search: FieldsSchema.search(),
+	 * });
+	 * ```
+	 */
+	search: () => z.string().trim().min(1).max(100).optional(),
 };
 
 /**
