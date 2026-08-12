@@ -219,3 +219,28 @@ describe('PaginationSchema', () => {
 		expect(() => PaginationSchema.parse({ page: 1.5 })).toThrow();
 	});
 });
+
+describe('FieldsSchema.search()', () => {
+	const schema = FieldsSchema.search();
+
+	it('is optional', () => {
+		expect(schema.parse(undefined)).toBeUndefined();
+	});
+
+	it('parses and trims a provided search term', () => {
+		expect(schema.parse('  jane  ')).toBe('jane');
+	});
+
+	it('throws when the trimmed value is empty', () => {
+		expect(() => schema.parse('   ')).toThrow();
+	});
+
+	it('throws when longer than 100 characters', () => {
+		expect(() => schema.parse('a'.repeat(101))).toThrow();
+	});
+
+	it('accepts a search term at the 100-character boundary', () => {
+		const value = 'a'.repeat(100);
+		expect(schema.parse(value)).toBe(value);
+	});
+});

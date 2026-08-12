@@ -14,7 +14,12 @@ export class AssignmentsController extends BaseController {
 		super({ domain: 'assignments', controller: 'AssignmentsController' });
 	}
 
-	/** @route GET /assignments */
+	/**
+	 * @route GET /assignments
+	 * Supports `?status=`, `?studentId=`, and `?search=` (matched
+	 * against title) in addition to `?page=&limit=` — validated by
+	 * `AssignmentQuerySchema` upstream in `assignments.routes.ts`.
+	 */
 	list = async (
 		req: Request,
 		res: Response,
@@ -22,8 +27,15 @@ export class AssignmentsController extends BaseController {
 	): Promise<void> => {
 		try {
 			const pagination = getPagination(req.query);
-			const { items, meta } =
-				await this.assignmentsService.list(pagination);
+			const status = req.query.status as
+				'PENDING' | 'SUBMITTED' | 'GRADED' | 'LATE' | undefined;
+			const studentId = req.query.studentId as string | undefined;
+			const search = req.query.search as string | undefined;
+
+			const { items, meta } = await this.assignmentsService.list(
+				pagination,
+				{ status, studentId, search }
+			);
 			this.ok(res, items, 'Assignments fetched', meta);
 		} catch (error) {
 			next(error);

@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { FieldsSchema } from '@shared/schemas';
+import { FieldsSchema, PaginationSchema } from '@shared/schemas';
 
 /**
  * @module features/students/students.schema
@@ -30,3 +30,18 @@ export const UpdateStudentSchema = z
 	});
 
 export type UpdateStudentInput = z.infer<typeof UpdateStudentSchema>;
+
+/**
+ * Query params for `GET /students`. Extends the shared pagination
+ * shape with an optional free-text `search`, matched against
+ * `firstName`, `lastName`, and `studentCode` in
+ * {@link module:features/students/students.service.StudentsService.list}.
+ *
+ * @example
+ * GET /students?search=jane&page=1&limit=20
+ */
+export const StudentQuerySchema = PaginationSchema.extend({
+	search: FieldsSchema.search(),
+});
+
+export type StudentQueryInput = z.infer<typeof StudentQuerySchema>;

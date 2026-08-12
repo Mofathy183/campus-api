@@ -53,6 +53,49 @@ describe('StudentsController', () => {
 		);
 	});
 
+	it('list() forwards ?search= from the query string to the service', async () => {
+		(service.list as any).mockResolvedValue({
+			items: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				count: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		});
+		const req = { query: { search: 'jane' } } as unknown as Request;
+		const res = mockRes();
+
+		await controller.list(req, res, next);
+
+		expect(service.list).toHaveBeenCalledWith(
+			expect.objectContaining({ page: 1, limit: 20 }),
+			{ search: 'jane' }
+		);
+	});
+
+	it('list() forwards an undefined search when the query has none', async () => {
+		(service.list as any).mockResolvedValue({
+			items: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				count: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		});
+		const req = { query: {} } as Request;
+		const res = mockRes();
+
+		await controller.list(req, res, next);
+
+		expect(service.list).toHaveBeenCalledWith(expect.anything(), {
+			search: undefined,
+		});
+	});
+
 	it('getById() forwards the :id param and returns 200', async () => {
 		(service.getById as any).mockResolvedValue({ id: 's1' });
 		const req = { params: { id: 's1' } } as unknown as Request;

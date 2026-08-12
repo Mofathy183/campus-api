@@ -55,12 +55,103 @@ describe('AssignmentsService', () => {
 			});
 
 			expect(prisma.assignment.findMany).toHaveBeenCalledWith({
+				where: {},
 				skip: 0,
 				take: 20,
 				orderBy: { createdAt: 'desc' },
 			});
 			expect(result.items).toEqual([assignment()]);
 			expect(result.meta).toMatchObject({ page: 1, limit: 20, count: 1 });
+		});
+	});
+
+	describe('list() with filters', () => {
+		it('adds an exact-match status filter when status is given', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([
+				assignment({ status: 'PENDING' }),
+			]);
+			(prisma.assignment.count as any).mockResolvedValue(1);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ status: 'PENDING' }
+			);
+
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { status: 'PENDING' } })
+			);
+			expect(prisma.assignment.count).toHaveBeenCalledWith({
+				where: { status: 'PENDING' },
+			});
+		});
+
+		it('adds an exact-match studentId filter when studentId is given', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([
+				assignment(),
+			]);
+			(prisma.assignment.count as any).mockResolvedValue(1);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ studentId: 's1' }
+			);
+
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { studentId: 's1' } })
+			);
+		});
+
+		it('adds a contains filter on title when search is given', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([
+				assignment(),
+			]);
+			(prisma.assignment.count as any).mockResolvedValue(1);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ search: 'homework' }
+			);
+
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						title: { contains: 'homework', mode: 'insensitive' },
+					},
+				})
+			);
+		});
+
+		it('combines status, studentId, and search into one where clause', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([
+				assignment(),
+			]);
+			(prisma.assignment.count as any).mockResolvedValue(1);
+
+			await service.list(
+				{ page: 1, limit: 20, skip: 0, take: 20 },
+				{ status: 'PENDING', studentId: 's1', search: 'homework' }
+			);
+
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						status: 'PENDING',
+						studentId: 's1',
+						title: { contains: 'homework', mode: 'insensitive' },
+					},
+				})
+			);
+		});
+
+		it('falls back to an empty where clause when no filters are given', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([]);
+			(prisma.assignment.count as any).mockResolvedValue(0);
+
+			await service.list({ page: 1, limit: 20, skip: 0, take: 20 });
+
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: {} })
+			);
 		});
 	});
 

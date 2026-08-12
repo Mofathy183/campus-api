@@ -5,10 +5,10 @@ import {
 	validateQuery,
 	validateUuidParam,
 } from '@shared/middleware';
-import { PaginationSchema } from '@shared/schemas';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
 import {
+	AssignmentQuerySchema,
 	CreateAssignmentSchema,
 	UpdateAssignmentStatusSchema,
 } from './assignments.schema';
@@ -18,7 +18,10 @@ import {
  * @description Mounts the assignments feature's three routes, all
  * gated behind `requireAuth` — mounted at `/assignments` in app.ts.
  * No `GET /:id` or `DELETE`: the spec defines only
- * GET / POST / PATCH:id for this feature.
+ * GET / POST / PATCH:id for this feature. `GET /` validates against
+ * `AssignmentQuerySchema` (pagination + optional `status`/
+ * `studentId`/`search`) rather than the bare shared
+ * `PaginationSchema`.
  */
 const router = Router();
 
@@ -27,7 +30,11 @@ const assignmentsController = new AssignmentsController(assignmentsService);
 
 router.use(requireAuth);
 
-router.get('/', validateQuery(PaginationSchema), assignmentsController.list);
+router.get(
+	'/',
+	validateQuery(AssignmentQuerySchema),
+	assignmentsController.list
+);
 router.post(
 	'/',
 	validateBody(CreateAssignmentSchema),

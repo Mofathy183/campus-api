@@ -56,6 +56,46 @@ describe('Courses routes', () => {
 				count: 1,
 			});
 		});
+
+		it('applies ?search=&?code= as where filters reaching Prisma', async () => {
+			(prisma.course.findMany as any).mockResolvedValue([]);
+			(prisma.course.count as any).mockResolvedValue(0);
+
+			const res = await request(app)
+				.get('/courses?search=CS201&code=CS201')
+				.set(authHeader);
+
+			expect(res.status).toBe(200);
+			expect(prisma.course.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						OR: [
+							{
+								title: {
+									contains: 'CS201',
+									mode: 'insensitive',
+								},
+							},
+							{
+								code: {
+									contains: 'CS201',
+									mode: 'insensitive',
+								},
+							},
+						],
+						code: 'CS201',
+					},
+				})
+			);
+		});
+
+		it('returns 400 when ?code= has an invalid shape', async () => {
+			const res = await request(app)
+				.get('/courses?code=$$')
+				.set(authHeader);
+
+			expect(res.status).toBe(400);
+		});
 	});
 
 	describe('GET /courses/:id', () => {

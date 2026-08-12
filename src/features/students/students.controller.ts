@@ -14,7 +14,12 @@ export class StudentsController extends BaseController {
 		super({ domain: 'students', controller: 'StudentsController' });
 	}
 
-	/** @route GET /students */
+	/**
+	 * @route GET /students
+	 * Supports `?search=` (matched against firstName/lastName/
+	 * studentCode) in addition to `?page=&limit=` — validated by
+	 * `StudentQuerySchema` upstream in `students.routes.ts`.
+	 */
 	list = async (
 		req: Request,
 		res: Response,
@@ -22,7 +27,11 @@ export class StudentsController extends BaseController {
 	): Promise<void> => {
 		try {
 			const pagination = getPagination(req.query);
-			const { items, meta } = await this.studentsService.list(pagination);
+			const search = req.query.search as string | undefined;
+			const { items, meta } = await this.studentsService.list(
+				pagination,
+				{ search }
+			);
 			this.ok(res, items, 'Students fetched', meta);
 		} catch (error) {
 			next(error);
