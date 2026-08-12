@@ -50,6 +50,55 @@ describe('AssignmentsController', () => {
 		);
 	});
 
+	it('list() forwards ?status=, ?studentId=, and ?search= to the service', async () => {
+		(service.list as any).mockResolvedValue({
+			items: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				count: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		});
+		const studentId = crypto.randomUUID();
+		const req = {
+			query: { status: 'PENDING', studentId, search: 'homework' },
+		} as unknown as Request;
+		const res = mockRes();
+
+		await controller.list(req, res, next);
+
+		expect(service.list).toHaveBeenCalledWith(expect.anything(), {
+			status: 'PENDING',
+			studentId,
+			search: 'homework',
+		});
+	});
+
+	it('list() forwards undefined filters when the query has none', async () => {
+		(service.list as any).mockResolvedValue({
+			items: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				count: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		});
+		const req = { query: {} } as Request;
+		const res = mockRes();
+
+		await controller.list(req, res, next);
+
+		expect(service.list).toHaveBeenCalledWith(expect.anything(), {
+			status: undefined,
+			studentId: undefined,
+			search: undefined,
+		});
+	});
+
 	it('create() returns 201 on success', async () => {
 		(service.create as any).mockResolvedValue({
 			id: 'a1',

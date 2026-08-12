@@ -57,6 +57,45 @@ describe('Assignments routes', () => {
 				count: 1,
 			});
 		});
+
+		it('applies ?status=&?studentId=&?search= as where filters reaching Prisma', async () => {
+			(prisma.assignment.findMany as any).mockResolvedValue([]);
+			(prisma.assignment.count as any).mockResolvedValue(0);
+			const studentId = uuid();
+
+			const res = await request(app)
+				.get(
+					`/assignments?status=PENDING&studentId=${studentId}&search=homework`
+				)
+				.set(authHeader);
+
+			expect(res.status).toBe(200);
+			expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						status: 'PENDING',
+						studentId,
+						title: { contains: 'homework', mode: 'insensitive' },
+					},
+				})
+			);
+		});
+
+		it('returns 400 for an invalid ?status= value', async () => {
+			const res = await request(app)
+				.get('/assignments?status=NOT_A_STATUS')
+				.set(authHeader);
+
+			expect(res.status).toBe(400);
+		});
+
+		it('returns 400 for a malformed ?studentId=', async () => {
+			const res = await request(app)
+				.get('/assignments?studentId=not-a-uuid')
+				.set(authHeader);
+
+			expect(res.status).toBe(400);
+		});
 	});
 
 	describe('POST /assignments', () => {
