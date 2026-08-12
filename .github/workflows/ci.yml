@@ -19,13 +19,11 @@ env:
   JWT_AUDIENCE: campus-api-client
 
 jobs:
-  # ------------------------------------------------------------------
-  # Static checks — format, lint, type-check. Fails fast before any
-  # test job spins up, since a formatting/type error makes every
-  # downstream job's failure noise redundant.
-  # ------------------------------------------------------------------
+  # Kept separate from the test jobs so a bad format/lint/type error
+  # fails in seconds, before any job pays the cost of Prisma generate
+  # + Vitest.
   static-checks:
-    name: Format, lint, type-check
+    name: Static Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,15 +53,11 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
-  # ------------------------------------------------------------------
-  # Shared layer tests — errors, middleware, core, crypto, schemas,
-  # utils. Every feature depends on this layer, so it's verified in
-  # its own job before any feature test job runs; a broken shared
-  # module fails here first instead of surfacing as a confusing
-  # cascade of feature-test failures downstream.
-  # ------------------------------------------------------------------
+  # Every feature imports from src/shared, so this is gated ahead of
+  # the feature jobs — a broken shared module should fail once, here,
+  # instead of as a repeated failure across all four features.
   shared-tests:
-    name: Test shared layer
+    name: Shared Layer Tests
     runs-on: ubuntu-latest
     needs: static-checks
     steps:
@@ -88,13 +82,11 @@ jobs:
       - name: Test shared
         run: pnpm vitest run src/shared --coverage=false
 
-  # ------------------------------------------------------------------
-  # Feature unit tests — controllers and services, run with mocked
-  # Prisma/dependencies. Excludes *.routes.test.ts, which are the
-  # Supertest-driven integration tests run in the next job.
-  # ------------------------------------------------------------------
+  # --exclude drops *.routes.test.ts (the Supertest integration
+  # suites), so this job only runs controller/service tests against
+  # mocked Prisma.
   feature-unit-tests:
-    name: Test features (unit)
+    name: Feature Unit Tests
     runs-on: ubuntu-latest
     needs: shared-tests
     steps:
@@ -122,20 +114,17 @@ jobs:
           --exclude "**/*.routes.test.ts"
           --coverage=false
 
-  # ------------------------------------------------------------------
-  # Feature integration tests — *.routes.test.ts, exercised through
-  # Supertest against the real Express app (real Zod validation, real
-  # route wiring), with Prisma mocked at the data-access boundary.
-  # Runs only after unit tests pass, since a route-test failure caused
-  # by broken service/controller logic is redundant once the
-  # unit-level failure has already been caught in the previous job.
+  # IMPORTANT: the Vitest CLI filter matches a filename substring, not
+  # a shell glob — "src/features/**/*.routes.test.ts" silently matches
+  # zero files. ".routes.test" is what actually targets these files.
   #
-  # Note: the vitest CLI filter matches on filename substring, not a
-  # shell glob — ".routes.test" (not "**/*.routes.test.ts") is what
-  # actually targets these files.
-  # ------------------------------------------------------------------
+  # These are the *.routes.test.ts Supertest suites: real Express app,
+  # real Zod validation, real route wiring, with Prisma mocked at the
+  # data-access boundary. Gated behind feature-unit-tests since a
+  # route failure caused by broken service/controller logic is
+  # redundant once the unit job already caught it.
   feature-integration-tests:
-    name: Test features (integration)
+    name: Feature Integration Tests
     runs-on: ubuntu-latest
     needs: feature-unit-tests
     steps:
@@ -160,10 +149,6 @@ jobs:
       - name: Test features (integration)
         run: pnpm vitest run .routes.test --coverage=false
 
-  # ------------------------------------------------------------------
-  # Build — last gate. Only runs once every check and test job above
-  # has passed.
-  # ------------------------------------------------------------------
   build:
     name: Build
     runs-on: ubuntu-latest
