@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { FieldsSchema } from '@shared/schemas';
+import { FieldsSchema, PaginationSchema } from '@shared/schemas';
 
 /**
  * @module features/courses/courses.schema
@@ -11,6 +11,10 @@ import { FieldsSchema } from '@shared/schemas';
  * is ever added, its schema belongs here, following the same
  * "all fields optional + `.refine()` at-least-one" shape used by
  * `UpdateStudentSchema` in `students.schema.ts`.
+ *
+ * `CourseQuerySchema` extends the shared pagination shape with an
+ * optional free-text `search` (matched against `title`/`code`) and
+ * an optional exact-match `code` filter for `GET /courses`.
  */
 
 /**
@@ -35,3 +39,24 @@ export const CreateCourseSchema = z.object({
 
 /** Validated, parsed shape of a `POST /courses` request body. */
 export type CreateCourseInput = z.infer<typeof CreateCourseSchema>;
+
+/**
+ * Query params for `GET /courses`. Extends the shared pagination
+ * shape with:
+ * - `search` — free-text, matched against `title` and `code`.
+ * - `code` — exact-match filter on the institution-facing course code
+ *   (reuses `FieldsSchema.courseCode()` so an invalid shape like
+ *   `"$$"` fails validation before it ever reaches Prisma).
+ *
+ * Both are optional and independent — a request can supply either,
+ * both, or neither.
+ *
+ * @example
+ * GET /courses?search=CS201&code=CS201
+ */
+export const CourseQuerySchema = PaginationSchema.extend({
+	search: FieldsSchema.search(),
+	code: FieldsSchema.courseCode().optional(),
+});
+
+export type CourseQueryInput = z.infer<typeof CourseQuerySchema>;

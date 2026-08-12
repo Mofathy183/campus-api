@@ -1,4 +1,4 @@
-import type { Course } from '@prisma-generated/client';
+import type { Course, Prisma } from '@prisma-generated/client';
 import { prisma } from '@config';
 import { BaseService } from '@shared/core';
 import { ErrorCode } from '@shared/errors';
@@ -18,21 +18,64 @@ export interface CourseListResult {
 	meta: ReturnType<typeof buildPaginationMeta>;
 }
 
+/** Optional filters accepted by {@link CoursesService.list}. */
+export interface CourseListFilters {
+	/** Free-text term matched against title/code. */
+	search?: string;
+	/** Exact-match filter on the institution-facing course code. */
+	code?: string;
+}
+
 export class CoursesService extends BaseService {
 	constructor() {
 		super({ domain: 'courses', service: 'CoursesService' });
 	}
 
-	async list(pagination: PaginationPayload): Promise<CourseListResult> {
+	/**
+	 * Builds the Prisma `where` clause for `GET /courses`.
+	 *
+	 * `search` and `code` are independent and both optional — either,
+	 * both, or neither may be present. `code` is an exact match (it's
+	 * a unique column); `search` is a case-insensitive partial match
+	 * against `title` or `code`. Returns `{}` when neither is given,
+	 * so unfiltered calls behave exactly as before this feature was
+	 * added.
+	 *
+	 * @param filters - Optional filters parsed from `req.query`.
+	 * @returns A Prisma `CourseWhereInput`, `{}` when no filter applies.
+	 */
+	private buildWhere(filters: CourseListFilters): Prisma.CourseWhereInput {
+		const where: Prisma.CourseWhereInput = {};
+
+		if (filters.search) {
+			where.OR = [
+				{ title: { contains: filters.search, mode: 'insensitive' } },
+				{ code: { contains: filters.search, mode: 'insensitive' } },
+			];
+		}
+
+		if (filters.code) {
+			where.code = filters.code;
+		}
+
+		return where;
+	}
+
+	async list(
+		pagination: PaginationPayload,
+		filters: CourseListFilters = {}
+	): Promise<CourseListResult> {
 		const { skip, take, page, limit } = pagination;
+		const where = this.buildWhere(filters);
 
 		const [items, count] = await Promise.all([
 			prisma.course.findMany({
+				where,
 				skip,
 				take,
 				orderBy: { createdAt: 'desc' },
 			}),
-			prisma.course.count(),
+			prisma.course.count({ where }),
 		]);
 
 		return { items, meta: buildPaginationMeta(page, limit, count) };

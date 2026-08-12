@@ -14,7 +14,12 @@ export class CoursesController extends BaseController {
 		super({ domain: 'courses', controller: 'CoursesController' });
 	}
 
-	/** @route GET /courses */
+	/**
+	 * @route GET /courses
+	 * Supports `?search=` (matched against title/code) and `?code=`
+	 * (exact match) in addition to `?page=&limit=` — validated by
+	 * `CourseQuerySchema` upstream in `courses.routes.ts`.
+	 */
 	list = async (
 		req: Request,
 		res: Response,
@@ -22,7 +27,12 @@ export class CoursesController extends BaseController {
 	): Promise<void> => {
 		try {
 			const pagination = getPagination(req.query);
-			const { items, meta } = await this.coursesService.list(pagination);
+			const search = req.query.search as string | undefined;
+			const code = req.query.code as string | undefined;
+			const { items, meta } = await this.coursesService.list(pagination, {
+				search,
+				code,
+			});
 			this.ok(res, items, 'Courses fetched', meta);
 		} catch (error) {
 			next(error);
