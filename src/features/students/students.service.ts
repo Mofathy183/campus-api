@@ -1,4 +1,4 @@
-import type { Student, User } from '@prisma-generated/client';
+import type { Student, User, Prisma } from '@prisma-generated/client';
 import { prisma } from '@config';
 import { BaseService } from '@shared/core';
 import { ErrorCode } from '@shared/errors';
@@ -29,22 +29,67 @@ export interface StudentListResult {
 	meta: ReturnType<typeof buildPaginationMeta>;
 }
 
+/** Optional filters accepted by {@link StudentsService.list}. */
+export interface StudentListFilters {
+	/** Free-text term matched against firstName/lastName/studentCode. */
+	search?: string;
+}
+
 export class StudentsService extends BaseService {
 	constructor() {
 		super({ domain: 'students', service: 'StudentsService' });
 	}
 
-	async list(pagination: PaginationPayload): Promise<StudentListResult> {
+	/**
+	 * Builds the Prisma `where` clause for `GET /students`.
+	 *
+	 * Absent or empty `search` returns `{}` (no filter, matches every
+	 * row) so unfiltered calls behave exactly as before this feature
+	 * was added. When present, `search` is matched case-insensitively
+	 * against `firstName`, `lastName`, and `studentCode` via `OR` —
+	 * a partial match on any one field is enough to include the row.
+	 *
+	 * @param filters - Optional filters parsed from `req.query`.
+	 * @returns A Prisma `StudentWhereInput`, `{}` when no filter applies.
+	 */
+	private buildWhere(filters: StudentListFilters): Prisma.StudentWhereInput {
+		if (!filters.search) return {};
+
+		return {
+			OR: [
+				{
+					firstName: {
+						contains: filters.search,
+						mode: 'insensitive',
+					},
+				},
+				{ lastName: { contains: filters.search, mode: 'insensitive' } },
+				{
+					studentCode: {
+						contains: filters.search,
+						mode: 'insensitive',
+					},
+				},
+			],
+		};
+	}
+
+	async list(
+		pagination: PaginationPayload,
+		filters: StudentListFilters = {}
+	): Promise<StudentListResult> {
 		const { skip, take, page, limit } = pagination;
+		const where = this.buildWhere(filters);
 
 		const [items, count] = await Promise.all([
 			prisma.student.findMany({
+				where,
 				skip,
 				take,
 				orderBy: { createdAt: 'desc' },
 				include: { user: { select: userSelect } },
 			}),
-			prisma.student.count(),
+			prisma.student.count({ where }),
 		]);
 
 		return {
