@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { FieldsSchema } from '@shared/schemas';
+import { FieldsSchema, PaginationSchema } from '@shared/schemas';
 
 /**
  * @module features/assignments/assignments.schema
@@ -11,6 +11,11 @@ import { FieldsSchema } from '@shared/schemas';
  * only accepts `status`, matching the model's doc comment
  * ("mutates this field to move an assignment through its lifecycle")
  * rather than acting as a general partial-update endpoint.
+ *
+ * `AssignmentQuerySchema` extends the shared pagination shape with an
+ * optional exact-match `status` filter, an optional exact-match
+ * `studentId` filter, and an optional free-text `search` (matched
+ * against `title`) for `GET /assignments`.
  */
 
 /** Mirrors the Prisma `AssignmentStatus` enum in `assignment.prisma`. */
@@ -62,3 +67,25 @@ export const UpdateAssignmentStatusSchema = z.object({
 export type UpdateAssignmentStatusInput = z.infer<
 	typeof UpdateAssignmentStatusSchema
 >;
+
+/**
+ * Query params for `GET /assignments`. Extends the shared pagination
+ * shape with:
+ * - `status` — exact-match filter, reuses {@link AssignmentStatusEnum}
+ *   so an invalid value (e.g. `"NOT_A_STATUS"`) fails validation
+ *   before reaching Prisma.
+ * - `studentId` — exact-match filter, scoping results to one student.
+ * - `search` — free-text, matched against `title`.
+ *
+ * All three are optional and independent.
+ *
+ * @example
+ * GET /assignments?status=PENDING&studentId=<uuid>&search=homework
+ */
+export const AssignmentQuerySchema = PaginationSchema.extend({
+	status: AssignmentStatusEnum.optional(),
+	studentId: FieldsSchema.uuid().optional(),
+	search: FieldsSchema.search(),
+});
+
+export type AssignmentQueryInput = z.infer<typeof AssignmentQuerySchema>;
